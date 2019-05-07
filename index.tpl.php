@@ -125,10 +125,11 @@ LANDATA2018;
 
 	fooflag($landata);
 
-	$lanmap = ['name', 'location', 'date', 'end', 'price', 'participants', 'link', 'participation', 'is_future', 'year'];
+	$lanmap = ['name', 'location', 'date', 'start', 'end', 'price', 'participants', 'link', 'participation', 'is_future', 'year'];
 
 	$lans = compose($lanmap, $landata);
 	yaml_emit_file('lans.yml', json_decode(json_encode($lans), true));
+	pre(yaml_parse_file('lans.yml'));
 	$futurelans = array_filter($lans, function($lan){ return $lan->is_future; });
 	$pastlans = array_filter($lans, function($lan){ return !$lan->is_future; });
 
