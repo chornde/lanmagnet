@@ -9,129 +9,71 @@
 		- ical export https://stackoverflow.com/questions/5329529/i-want-html-link-to-ics-file-to-open-in-calendar-app-when-clicked-currently-op
 	*/
 
+	class Filter {
+	    public static function ofthepast(string $key){
+	        $now = new DateTime();
+	        return function($item) use ($key, $now){
+	            return (new DateTime($item->$key)) <= $now;
+            };
+        }
 
+	    public static function inthefuture(string $key){
+            $now = new DateTime();
+            return function($item) use ($key, $now){
+                return (new DateTime($item->$key)) > $now;
+            };
+        }
+    }
 
-	function landatacsv($out, $string, $delim = "\n", $sep = ","){
-		$lines = explode($delim, $string);
-		foreach($lines as $line){
-			$columns = explode($sep, $line);
-			list($from, $to) = explode('-', $columns[1]);
-			$from .= '2018';
-			$start = (new DateTime($from))->format('Y-m-d');
-			$to .= '2018';
-			$end = (new DateTime($to))->format('Y-m-d');
-			$part = $columns[6] === '' ? null : ($columns[6] === '0' ? false : true ) ;
-			$price = $columns[3] === '' ? null : $columns[3] ;
-			$out[] = [$columns[0],$columns[2],$columns[1],$start,$end,$price,$columns[4],$columns[5],$part,];
-		}
-		return $out;
-	}
+	class Sort {
+	    public static function byKey(string $key){
+	        return function($a, $b) use ($key){
+	            return $a->$key <=> $b->$key;
+            };
+        }
+    }
+
+	class LanConnector {
+        protected $lans = [];
+
+        public function __construct(string $file){
+            $lans = yaml_parse_file($file);
+            foreach($lans as $lan){
+                $this->lans[] = (object)$lan;
+            }
+        }
+
+        public function sort(Closure $sort, bool $reverse = false) : self {
+            usort($this->lans, $sort);
+            $this->lans = $reverse ? array_reverse($this->lans) : $this->lans ;
+            return $this;
+        }
+
+        public function ofthepast() : Generator {
+            foreach(array_filter($this->lans, Filter::ofthepast('end')) as $lan) yield $lan;
+        }
+
+        public function inthefuture() : Generator {
+            foreach(array_filter($this->lans, Filter::inthefuture('end')) as $lan) yield $lan;
+        }
+
+        public function fetch() : Generator {
+            foreach($this->lans as $lan) yield $lan;
+        }
+
+        public function fetchAll() : array {
+            return $this->lans;
+        }
+    }
+
+    $lans = (new LanConnector($config['lans']['file']));
+    $lans->sort(Sort::byKey('start'));
 
 	$ternaries = [
 		true  => '✓',
 		false => '✕',
 		null  => '‽',
 	];
-
-	# 2017
-
-	$landata2017 = [
-		['GyBraLAN', 'Hamburg', '17. - 19.3.', '2017-03-17', '2017-03-19', 10, 80, 'http://www.gybralanre.de/', true],
-		['genial verpLANt', 'Brake', '7. - 9.4.', '2017-04-07', '2017-04-09', 20, 200, 'http://www.total-verplant.de', null],
-		['OstfriesLAN', '26409, Wittmund', '21. - 23.4.', '2017-04-21', '2017-04-23', 25, 100, 'http://www.ostfrieslan.de', true],
-		['SüdseeLAN', 'Braunschweig', '21. - 23.4.', '2017-04-21', '2017-04-23', 15, 50, 'https://docs.google.com/forms/d/e/1FAIpQLSdMqnFBcg7LTwFiaTvrRijSUMHe3ZlQi9c8xOAkNcJgBsHJnA/viewform?c=0&w=1', null],
-		['GSH-Lan', 'Hannover/Garbsen', '21. - 23.4.', '2017-04-21', '2017-04-23', 35, 600, 'http://www.gsh-lan.com/', null],
-		['MoinMoinLAN', 'Bremerhaven', '12. - 14.5.', '2017-05-12', '2017-05-14', 10, 35, 'http://www.moinmoinlan.de/', true],
-		['LANresort', 'Bispingen', '12. - 15.5.', '2017-05-12', '2017-05-15', 100, 300, 'https://www.lanresort.de/', null],
-		['the-encounter: three', '49808, Lingen', '19. - 21.5.', '2017-05-19', '2017-05-21', 10, 60, 'http://www.the-encounter.de/', null],
-		['play germany', 'Hannover/Burgdorf', '25. - 28.5.', '2017-05-25', '2017-05-28', 30, 80, 'http://www.pg-lan.de/', null],
-		['MultiMadness', 'Hamburg', '9. - 11.6.', '2017-06-09', '2017-06-11', 30, 200, 'https://www.multimadness.de', null],
-		['NGC', '25813, Husum', '5. - 8.10.', '2017-10-05', '2017-10-08', 60, 500, 'https://www.ngc-germany.de/', null],
-		['genial verpLANt #23', '26919 Brake', '6. - 8.10.', '2017-10-06', '2017-10-08', 18, 200, 'https://www.total-verplant.de', null],
-		['Maxlan', 'Meppen', '17. - 19.11.', '2017-11-17', '2017-11-19', 30, 210, 'http://www.maxlan.de/', null],
-		['Rofl-LAN', 'Cuxhaven', '1. - 3.12.', '2017-12-01', '2017-12-03', 13, 120, 'http://www.rofl-lan.de', null],
-		['Northcon', '24537 Neumünster', '14. - 17.12.', '2017-12-14', '2017-12-17', 69, 1300, 'https://www.northcon.de', null],
-	];
-
-	# 2018
-
-	$landata2018 = <<<'LANDATA2018'
-Northcon,13.12.-16.12.,24537 Neumünster,,1000,https://www.northcon.de/infos/ueberblick,
-LANresort,20.04.-23.04.,29646 Bispingen,,400,https://www.lanresort.de/infos/ueberblick,
-GyBraLAN:RE 6,23.2.-25.02.,22175 Hamburg Bramfeld,10,98,http://www.gybralanre.de/index.php?mod=info2&action=show_info2&id=5,
-genial verpLANt #24,23.3.-25.3.,26919 Brake,18,200,https://www.total-verplant.de/party/?do=event,
-SüdseeLAN,23.2.-25.2.,Braunschweig,20,50,https://sites.google.com/view/suedseelan,
-GSH 2018 #1,23.3.-25.3.,30827 Garbsen,35,600,http://www.gsh-lan.com/party/?do=event,
-Boot:up LAN,18.5.-21.5.,40474 Düsseldorf,99,2500,https://www.bootup-lan.de/de/infos,
-MoinMoin V,29.6.-01.07.,27572 Bremerhaven,10,35,https://www.moinmoinlan.de,1
-Play-Germany LAN #4,4.5.-6.5.,31303 Burgdorf,25,150,http://portal.pg-lan.de/party/?do=event,
-MultiMadness 36,1.6.-3.6.,21220 Seevetal-Maschen,30,200,https://www.multimadness.de/?page=3,1
-NGC 2018,06.09.-09.09.,25813 Husum,60,500,https://www.ngc-germany.de/de/content/sicher-dir-noch-dein-ticket,
-Maxlan 27,2.11.-4.11.,49716 Meppen,40,228,https://www.maxlan.de/party/?do=event,
-Springe-LAN,24.3.-25.3.,31832 Springe/Hannover,0,22,https://www.acgc.de/veranstaltungsanmeldung/,
-Fette Lan,21.4.-22.4.,38350 Helmstedt,5,28,http://fettelan.de/termine/,
-LaWa #08/15,27.4.-29.4.,59602 Rüthen,20,36,http://www.la-wa.com/?action=info,
-#TSF18,14.6.-17.6.,30521 Hannover/Expo,120,2500,https://tek.ag/,
-BoerdeLAN 26,29.6.-1.7.,59581 Warstein,40,400,https://www.boerde-lan.de/party/?do=event&id=26,
-PyrateLAN #2,21.9.-23.9.,24784 Westerrönfeld,29,110,https://pyratelan.de/party/?do=event,
-genial verpLANt,5.10.-7.10.,26919 Brake,35,200,https://www.total-verplant.de,1
-LAN Schwanewede,05.10.-7.10.,Schwanewede,?,?,http://www.lan-schwanewede.de,
-ostfriesLAN,12.10.-14.10.,Wittmund,40,100,https://ostfrieslan.de/,1
-LAN-Party-Wehdem,3.11.-4.11.,32351 Wehdem/Stemwede,5,56,https://www.lanparty-wehdem.de,0
-Ro.Fl.-LAN 5,9.11.-11.11.,27474 Cuxhaven,15,120,http://www.rofl-crew.de/party/?do=event,1
-LANDATA2018;
-
-	$landata2018 = landatacsv($landata, $landata2018);
-
-	# 2019
-
-	$landata2019 = [
-		['MoinMoinLAN VI', '27572, Bremerhaven', '25. - 27.1.', '2019-01-25', '2019-01-27', 10, 28, 'http://www.moinmoinlan.de', true],
-		['GamePlay', 'Weyhe/Leeste', '26. - 27.1.', '2019-01-26', '2019-01-27', 15, null, 'https://gameplaylan.de/Events', null],
-		['the-encounter: five', '49808 Lingen', '22. - 24.2.', '2019-02-22', '2019-02-24', 8, 80, 'https://the-encounter.de', null],
-		['GyBraLAN:RE 7', '22179, Hamburg', '22. - 24.2.', '2019-02-22', '2019-02-24', 10, 100, 'http://www.gybralanre.de/', true],
-		['PADERSMASH', '33102 Paderborn', '16. - 16.3.', '2019-03-16', '2019-03-16', null, 64, 'https://lan-party.org/', null],
-		['genial verpLANt #26', '26919 Brake', '12. - 14.4.', '2019-04-12', '2019-04-14', 18, 200, 'https://www.total-verplant.de/', true],
-		['NETCONVENT #51', '38239 Salzgitter', '5. - 7.4.', '2019-04-05', '2019-04-07', 15, 40, 'https://netconvent.net', null],
-		['GSH 2019 #1', 'Hannover', '12. - 14.4.', '2019-04-12', '2019-04-14', 35, 600, 'https://www.gsh-lan.com/', false],
-		['LaWa #17', '59602 Rüthen', '26. - 28.4.', '2019-04-26', '2019-04-28', 20, 36, 'http://www.la-wa.com', false],
-		['BoerdeLAN', '59581 Warstein', '10. - 12.5.', '2019-05-10', '2019-05-12', 40, 400, 'https://boerde-lan.de/home/', null],
-		['LANresort', '29646 Bispingen', '3. - 6.5.', '2019-05-03', '2019-05-06', 150, 394, 'https://www.lanresort.de', null],
-		['Multimadness 37', '21220, Maschen', '14. - 16.6.', '2019-06-14', '2019-06-16', 30, 200, 'http://www.multimadness.de/', true],
-		['Fette LAN #7', '38350 Helmstedt', '4. - 6.1.', '2019-01-04', '2019-01-06', 10, 60, 'http://www.fettelan.de/', null],
-		['Fette LAN #8', '38350 Helmstedt', '8. - 10.3.', '2019-03-08', '2019-03-10', 10, 60, 'http://www.fettelan.de/', null],
-		['Fette LAN #9', '38350 Helmstedt', '10. - 12.5.', '2019-05-10', '2019-05-12', 10, 60, 'http://www.fettelan.de/', null],
-		['GamePlay', '28844 Weyhe', '5. - 7.7.', '2019-07-05', '2019-07-07', 25, 60, 'https://gameplaylan.de/', true],
-		['Fette LAN #10', '38350 Helmstedt', '12. - 14.7.', '2019-07-12', '2019-07-14', 10, 60, 'http://www.fettelan.de/', null],
-		['Optimal LAN', '38373 Süpplingen', '12. - 14.7.', '2019-07-12', '2019-07-14', 20, 60, 'https://www.tatami-suepplingen.de/e-sport/optimal-lan-party/', null],
-		['the-encounter: summer edition', '49808 Lingen', '16. - 18.8.', '2019-08-16', '2019-08-18', 8, 86, 'https://the-encounter.de', null],
-		['Fette LAN #11', '38350 Helmstedt', '20. - 22.9.', '2019-09-20', '2019-09-22', 10, 60, 'http://www.fettelan.de/', null],
-		['NGC', '25813 Husum', '3. - 6.10.', '2019-10-03', '2019-10-06', 60, 550, 'https://www.ngc-germany.de', null],
-		['GSH 2019 #2', 'Hannover', '11. - 13.10.', '2019-10-11', '2019-10-13', 35, 600, 'https://www.gsh-lan.com/', true],
-		['genial verpLANt 27', '26919 Brake', '11. - 13.10.', '2019-10-11', '2019-10-13', 20, 200, 'https://www.total-verplant.de/party/?do=event/', false],
-		['LAN Schwanewede', '28790 Schwanewede', '18. - 20.10.', '2019-10-18', '2019-10-20', 10, 60, 'http://www.lan-schwanewede.de/', null],
-		['SüdseeLAN', 'Braunschweig', '25. - 27.10.', '2019-10-25', '2019-10-27', 20, 50, 'https://sites.google.com/view/suedseelan/', null],
-		['PyrateLAN #3', '24784 Westerrönfeld', '1. - 3.11.', '2019-11-01', '2019-11-03', 25, 87, 'https://pyratelan.de/', null],
-		['Maxlan 28', '49716 Meppen', '1. - 3.11.', '2019-11-01', '2019-11-03', 29, 228, 'http://www.maxlan.de/', null],
-		['Fette LAN #12', '38350 Helmstedt', '8. - 10.11.', '2019-11-08', '2019-11-10', 10, 60, 'http://www.fettelan.de/', null],
-		['Ro.Fl. - Lan 6 on the beach', 'Cuxhaven', '15. - 17.11.', '2019-11-15', '2019-11-17', 17, 70, 'http://www.rofl-lan.de/', true],
-		['Northcon', 'Neumünster', '12. - 15.12.', '2019-12-12', '2019-12-15', null, 1300, 'https://www.northcon.de', null],
-	];
-	
-	
-	$landata = array_merge($landata2017, $landata2018, $landata2019);
-
-	foosort($landata, 3);
-
-	fooflag($landata);
-
-	$lanmap = ['name', 'location', 'date', 'start', 'end', 'price', 'participants', 'link', 'participation', 'is_future', 'year'];
-
-	$lans = compose($lanmap, $landata);
-	yaml_emit_file('lans.yml', json_decode(json_encode($lans), true));
-	pre(yaml_parse_file('lans.yml'));
-	$futurelans = array_filter($lans, function($lan){ return $lan->is_future; });
-	$pastlans = array_filter($lans, function($lan){ return !$lan->is_future; });
 
 ?>
 <!DOCTYPE html>
@@ -238,7 +180,7 @@ button { margin:25px; padding:5px 10px; border:none; font-size:15px; background-
 						<th></th>
 					</tr>
 					<?php $lastyear = 0; ?>
-					<?php foreach($pastlans as $lan): ?>
+					<?php foreach($lans->ofthepast() as $lan): ?>
 						<?php if($lan->year != $lastyear): ?>
 							<tr class="year future_no">
 								<td colspan=7><?=$lan->year?></td>
@@ -254,7 +196,7 @@ button { margin:25px; padding:5px 10px; border:none; font-size:15px; background-
 							<td><span class="ternaryicon <?=$ternaries[$lan->participation]?>"><?=$ternaries[$lan->participation]?></span></td>
 						</tr>
 					<?php endforeach; ?>
-					<?php foreach($futurelans as $lan): ?>
+					<?php foreach($lans->inthefuture() as $lan): ?>
 						<?php if($lan->year != $lastyear): ?>
 							<tr class="year">
 								<td colspan=7><?=$lan->year?></td>
