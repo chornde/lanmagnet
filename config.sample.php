@@ -3,12 +3,12 @@
 	$config = [
 		'db' => [
 			'dsn' => 'mysql:host=localhost;dbname=lanmagnet',
-			'user' => 'lanmagnet',
-			'pass' => 'lanmagnet123',
+			'user' => 'test',
+			'pass' => 'nix',
 		],
 		'steam' => [
 			'api' => [
-				'key' => 'EB7CD18887BB75FB44EC38C409F21CAB'
+				'key' => '123'
 			]
 		]
 	];
